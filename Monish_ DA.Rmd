@@ -1,0 +1,257 @@
+---
+title: "Monish N _ DA"
+output: html_document
+---
+# Read the CSV
+```{r}
+Chicago_Crime_All<-read.csv("D:/Data Analysis/Data After Exploratory Analysis/ChicagoCrime_15_18.csv")
+head(Chicago_Crime_All)
+```
+
+# Make BackUp
+```{r}
+Chicago_Crime_15_18 = Chicago_Crime_All
+```
+
+# Remove Year -- 2001 -- 2014
+```{r}
+Chicago_Crime_15_18<-Chicago_Crime_15_18[Chicago_Crime_15_18$Year!="2001",]
+Chicago_Crime_15_18<-Chicago_Crime_15_18[Chicago_Crime_15_18$Year!="2002",]
+Chicago_Crime_15_18<-Chicago_Crime_15_18[Chicago_Crime_15_18$Year!="2003",]
+Chicago_Crime_15_18<-Chicago_Crime_15_18[Chicago_Crime_15_18$Year!="2004",]
+Chicago_Crime_15_18<-Chicago_Crime_15_18[Chicago_Crime_15_18$Year!="2005",]
+Chicago_Crime_15_18<-Chicago_Crime_15_18[Chicago_Crime_15_18$Year!="2006",]
+Chicago_Crime_15_18<-Chicago_Crime_15_18[Chicago_Crime_15_18$Year!="2007",]
+Chicago_Crime_15_18<-Chicago_Crime_15_18[Chicago_Crime_15_18$Year!="2008",]
+Chicago_Crime_15_18<-Chicago_Crime_15_18[Chicago_Crime_15_18$Year!="2009",]
+Chicago_Crime_15_18<-Chicago_Crime_15_18[Chicago_Crime_15_18$Year!="2010",]
+Chicago_Crime_15_18<-Chicago_Crime_15_18[Chicago_Crime_15_18$Year!="2011",]
+Chicago_Crime_15_18<-Chicago_Crime_15_18[Chicago_Crime_15_18$Year!="2012",]
+Chicago_Crime_15_18<-Chicago_Crime_15_18[Chicago_Crime_15_18$Year!="2013",]
+Chicago_Crime_15_18<-Chicago_Crime_15_18[Chicago_Crime_15_18$Year!="2014",]
+```
+
+# Cleans Up the Data
+```{r}
+setup = function(dataset){
+  dataset$Day = factor(day(as.POSIXlt(dataset$Date,format="%m/%d/%Y %I:%M:%S %p")))
+  dataset$Month = factor(month(as.POSIXlt(dataset$Date,format="%m/%d/%Y %I:%M:%S %p"),label=TRUE))
+  dataset$Year = factor(year(as.POSIXlt(dataset$Date,format="%m/%d/%Y %I:%M:%S %p")))
+  dataset$Weekday = factor(wday(as.POSIXlt(dataset$Date,format="%m/%d/%Y %I:%M:%S %p"),label=TRUE))
+  dataset$Date <- as.Date(dataset$Date, "%m/%d/%Y %I:%M:%S %p")
+  
+  dataset<-dataset[dataset$Primary.Type!="",]
+  dataset<-dataset[dataset$Location.Description!="",]
+  dataset<-dataset[dataset$Arrest!="",]
+  dataset<-dataset[dataset$Beat!="",]
+  dataset<-dataset[dataset$Weekday!="",]
+  dataset<-dataset[dataset$Month!="",]
+  dataset<-dataset[dataset$District!="",]
+  
+  sum(is.na(dataset))
+  dataset<-na.omit(dataset)
+  
+  dataset$Crime_Type <- as.character(dataset$Primary.Type)
+  dataset$Crime_Type <- ifelse(dataset$Crime_Type %in% c("CRIM SEXUAL ASSAULT", "PROSTITUTION", "SEX OFFENSE"), 'SEX CASES', dataset$Crime_Type)
+  dataset$Crime_Type <- ifelse(dataset$Crime_Type %in% c("NARCOTICS", "OTHER NARCOTIC VIOLATION", "OTHER NARCOTIC VIOLATION"), 'DRUGS', dataset$Crime_Type)
+  dataset$Crime_Type <- ifelse(dataset$Crime_Type %in% c(" NON - CRIMINAL ", "NON-CRIMINAL", "NON -  CRIMINAL","NON-CRIMINAL (SUBJECT SPECIFIED)"), 'NON-CRIMINAL', dataset$Crime_Type)
+  dataset$Crime_Type <- ifelse(dataset$Crime_Type %in% c("HUMAN TRAFFICKING", "OTHER OFFENSE", "PUBLIC INDECENCY"), 'OTHER OFFENSE', dataset$Crime_Type)
+  
+  dataset = dataset %>% mutate(Crime.Type = as.factor(ifelse(Primary.Type %in% c("ARSON","ASSAULT", "BATTERY", "BURGLARY","CRIM SEXUAL ASSAULT", "HOMICIDE", "KIDNAPPING","HUMAN TRAFFICKING","ROBBERY", "SEX OFFENSE","DOMESTIC VIOLENCE", "INTIMIDATION"), "Violent", "Nonviolent")))
+  
+  
+  Aviation <- c("AIRCRAFT" , "AIRPORT BUILDING NON-TERMINAL - NON-SECURE AREA", "AIRPORT BUILDING NON-TERMINAL - SECURE AREA", "AIRPORT EXTERIOR -NON-SECURE AREA", "AIRPORT EXTERIOR - SECURE AREA", "AIRPORT PARKING LOT", "AIRPORT TERMINAL LOWER LEVEL - NON-SECURE AREA", "AIRPORT TERMINAL LOWER LEVEL - SECURE AREA", "AIRPORT TERMINAL MEZZANINE - NON-SECURE AREA", "AIRPORT TERMINAL UPPER LEVEL - NON-SECURE AREA", "AIRPORT TERMINAL UPPER LEVEL - SECURE AREA", "AIRPORT TRANSPORTATTION SYSTEM (ATS)","AIRPORT VENDING ESTABLISHMENT", "AIRPORT/AIRCRAFT", "AIRPORT EXTERIOR - NON-SECURE AREA", "AIRPORT TRANSPORTATION SYSTEM (ATS)")
+  Bank <- c("ATM (AUTOMATIC TELLER MACHINE)", "BANK", "CURRENCY EXCHANGE","CREDIT UNION", "CURRENCY EXCHANGE", "SAVINGS AND LOAN")
+  Buildings <- c('""', "ABANDONED BUILDING", "ALLEY", "ANIMAL HOSPITAL", "APARTMENT", "APPLIANCE STORE", "ATHLETIC CLUB", "BAR OR TAVERN", "BARBER SHOP/BEAUTY SALON", "BARBERSHOP", "BASEMENT", "BOWLING ALLEY", "CHA APARTMENT", "CHA APARTMENT", "CHA PARKING LOT", "CHA HALLWAY/STAIRWELL/ELEVATOR", "CHA PARKING LOT/GROUNDS", "WAREHOUSE")
+  Churches <- c("CEMETARY", "CHURCH PROPERTY", "CHURCH/SYNAGOGUE/PLACE OF WORSHIP")
+  Schools <- c( "PUBLIC HIGH SCHOOL","COLLEGE/UNIVERSITY GROUNDS","COLLEGE/UNIVERSITY RESIDENCE HALL", "SCHOOL YARD", "SCHOOL, PRIVATE, BUILDING", "SCHOOL, PRIVATE, GROUNDS", "SCHOOL, PUBLIC, BUILDING", "SCHOOL, PUBLIC, GROUNDS", "LIBRARY" )
+  Public_Transportation <- c("CTA \"\"L\"\" PLATFORM","CTA \"\"L\"\" TRAIN","CTA BUS", "CTA BUS STOP", "CTA GARAGE / OTHER PROPERTY", "CTA PLATFORM", "CTA STATION", "CTA TRACKS - RIGHT OF WAY", "CTA TRAIN","OTHER RAILROAD PROP / TRAIN DEPOT", "OTHER COMMERCIAL TRANSPORTATION" , "RAILROAD PROPERTY")
+  Vehicle <- c("TAXICAB","TRUCK", "VEHICLE - DELIVERY TRUCK","VEHICLE - OTHER RIDE SERVICE","VEHICLE NON-COMMERCIAL", "VEHICLE-COMMERCIAL","GAS STATION DRIVE/PROP.", "TAXI CAB", "CAR WASH", "AUTO", "DELIVERY TRUCK", "GARAGE/AUTO REPAIR", "PARKING LOT")
+  Recreation <- c("MOVIE HOUSE/THEATER", "SPORTS ARENA/STADIUM", "POOL ROOM")
+  Govt_Buildings <- c("FACTORY/MANUFACTURING BUILDING","FEDERAL BUILDING","FIRE STATION", "GOVERNMENT BUILDING","POLICE FACILITY/VEH PARKING LOT", "GOVERNMENT BUILDING/PROPERTY" ,"JAIL / LOCK-UP FACILITY", "PARK PROPERTY")
+  Residence <- c("RESIDENCE", "RESIDENCE PORCH/HALLWAY","RESIDENCE-GARAGE", "RESIDENTIAL YARD (FRONT/BACK)","GARAGE", "HOUSE", "DRIVEWAY - RESIDENTIAL","YARD" , "DRIVEWAY", "PORCH", "STAIRWELL")
+  Hospital <- c("NURSING HOME", "NURSING HOME/RETIREMENT HOME","PARKING LOT/GARAGE(NON.RESID.)", "DAY CARE CENTER", "HOSPITAL BUILDING/GROUNDS", "HOSPITAL", "MEDICAL/DENTAL OFFICE")
+  Stores <- c("COMMERCIAL / BUSINESS OFFICE","CLEANING STORE", "CONVENIENCE STORE", "DEPARTMENT STORE", "DRUG STORE", "GROCERY FOOD STORE",  "SMALL RETAIL STORE","TAVERN/LIQUOR STORE" ,"PAWN SHOP", "LIQUOR STORE" , "RETAIL STORE")
+  Water <- c("BOAT/WATERCRAFT","LAGOON", "LAKEFRONT/WATERFRONT/RIVERBANK", "POOLROOM")
+  Hotel <- c("HOTEL", "HOTEL/MOTEL","MOTEL")
+  Highway <- c("EXPRESSWAY EMBANKMENT", "HIGHWAY/EXPRESSWAY", "GAS STATION", "SIDEWALK", "CONSTRUCTION SITE", "BRIDGE")
+  Vending <- c("CLEANERS/LAUNDROMAT", "COIN OPERATED MACHINE","LAUNDRY ROOM", "NEWSSTAND")
+  Street <- c("VACANT LOT", "VACANT LOT/LAND" , "STREET", "DRIVEWAY", "GANGWAY", "VESTIBULE")
+  
+  #add new Column LocDesc same as Location.Description
+  dataset$LocDesc <- as.character(dataset$Location.Description)
+  dataset$LocDesc <- ifelse(dataset$LocDesc %in% Aviation, "AVIATION" , dataset$LocDesc)
+  dataset$LocDesc <- ifelse(dataset$LocDesc %in% Bank, "BANK", dataset$LocDesc)
+  dataset$LocDesc <- ifelse(dataset$LocDesc %in% Buildings, "BUILDINGS" , dataset$LocDesc)
+  dataset$LocDesc <- ifelse(dataset$LocDesc %in% Churches, "CHURCHES", dataset$LocDesc)
+  dataset$LocDesc <- ifelse(dataset$LocDesc %in% Schools, "SCHOOL", dataset$LocDesc)
+  dataset$LocDesc <- ifelse(dataset$LocDesc %in% Public_Transportation, "PUBTRANS", dataset$LocDesc)
+  dataset$LocDesc <- ifelse(dataset$LocDesc %in% Vehicle, "VEHICLE", dataset$LocDesc)
+  dataset$LocDesc <- ifelse(dataset$LocDesc %in% Residence, "RESIDENCE", dataset$LocDesc)
+  dataset$LocDesc <- ifelse(dataset$LocDesc %in% Govt_Buildings, "GOVBUILD", dataset$LocDesc)
+  dataset$LocDesc <- ifelse(dataset$LocDesc %in% Recreation, "RECREATION", dataset$LocDesc)
+  dataset$LocDesc <- ifelse(dataset$LocDesc %in% Hospital, "HOSPITAL", dataset$LocDesc)
+  dataset$LocDesc <- ifelse(dataset$LocDesc %in% Stores, "STORES", dataset$LocDesc)
+  dataset$LocDesc <- ifelse(dataset$LocDesc %in% Water, "WATER", dataset$LocDesc)
+  dataset$LocDesc <- ifelse(dataset$LocDesc %in% Hotel, "HOTEL", dataset$LocDesc)
+  dataset$LocDesc <- ifelse(dataset$LocDesc %in% Highway, "HIGHWAY", dataset$LocDesc)
+  dataset$LocDesc <- ifelse(dataset$LocDesc %in% Vending, "VENDING", dataset$LocDesc)
+  dataset$LocDesc <- ifelse(dataset$LocDesc %in% Street, "STREET", dataset$LocDesc)
+  
+  dataset<-dataset[!duplicated(dataset$Case.Number,dataset$Date),]
+  
+  # Convert as Factor Crime_Type and LocDesc
+  dataset$Crime_Type <- as.factor(dataset$Crime_Type)
+  dataset$LocDesc <- as.factor(dataset$LocDesc)
+  
+  # Done For Map
+  dataset$Community.Area <- as.character(dataset$Community.Area)
+  
+  Community_Area = c("ROGERS PARK", "WEST RIDGE","UPTOWN","LINCOLN SQUARE","NORTH CENTER","LAKE VIEW","LINCOLN PARK","NEAR NORTH SIDE","EDISON PARK","NORWOOD PARK","JEFFERSON PARK",
+                     "FOREST GLEN","NORTH PARK","ALBANY PARK","PORTAGE PARK","IRVING PARK","DUNNING","MONTCLARE","BELMONT CRAGIN","HERMOSA","AVONDALE",
+                     "LOGAN SQUARE","HUMBOLDT PARK","WEST TOWN","AUSTIN","WEST GARFIELD PARK","EAST GARFIELD PARK","NEAR WEST SIDE","NORTH LAWNDALE",
+                     "SOUTH LAWNDALE","LOWER WEST SIDE","LOOP","NEAR SOUTH SIDE","ARMOUR SQUARE","DOUGLAS","OAKLAND","FULLER PARK","GRAND BOULEVARD",
+                     "KENWOOD","WASHINGTON PARK","HYDE PARK","WOODLAWN","SOUTH SHORE","CHATHAM","AVALON PARK","SOUTH CHICAGO","BURNSIDE","CALUMET HEIGHTS",
+                     "ROSELAND","PULLMAN","SOUTH DEERING","EAST SIDE","WEST PULLMAN","RIVERDALE","HEGEWISCH","GARFIELD RIDGE","ARCHER HEIGHTS",
+                     "BRIGHTON PARK","MCKINLEY PARK","BRIDGEPORT","NEW CITY","WEST ELSDON","GAGE PARK","CLEARING","WEST LAWN","CHICAGO LAWN",
+                     "WEST ENGLEWOOD","ENGLEWOOD","GREATER GRAND CROSSING","ASHBURN","AUBURN GRESHAM","BEVERLY","WASHINGTON HEIGHTS",
+                     "MOUNT GREENWOOD","MORGAN PARK","OHARE","EDGEWATER")
+  
+  for(i in 1:77){
+    dataset$Community.Area <- ifelse(dataset$Community.Area %in% i, Community_Area[i], dataset$Community.Area)
+  }
+  
+  return(dataset)
+}
+
+library(lubridate) # day()
+library(magrittr) # %>%
+library(dplyr) # group_by # mutate
+
+
+ChicagoCrime2 = setup(Chicago_Crime_15_18)
+head(ChicagoCrime2)
+
+```
+
+# Top Crimes by Table
+```{r}
+table(ChicagoCrime2$Crime_Type)
+```
+
+# Top Crimes by Graph
+```{r}
+Top_CrimeType_Graph = function(dataset){
+  top_ctg <- dataset %>%
+    group_by(Crime_Type) %>%
+    summarise(Total = n()) %>% 
+    arrange(desc(Total)) %>%
+    ungroup() %>% 
+    mutate(PercTot = Total/sum(Total),rd = round(PercTot*100, digits=1)) %>% 
+    head(10)
+  
+  highchart() %>% 
+    hc_xAxis(categories = top_ctg$Crime_Type) %>% 
+    hc_add_series(data = top_ctg$rd, type = "column", showInLegend = FALSE) %>% 
+    hc_add_theme(hc_theme_db())
+}
+
+library(highcharter)
+library(tibble)
+
+Top_CrimeType_Graph(ChicagoCrime2)
+```
+
+# Top Crimes Locations by Graph
+```{r}
+Top_CrimeLocation_Graph = function(dataset){
+  loc <- dataset %>%
+    group_by(LocDesc) %>%
+    summarise(Total = n()) %>% 
+    arrange(desc(Total)) %>%
+    ungroup() %>% 
+    mutate(PercTot = Total/sum(Total),rd = round(PercTot*100, digits=1)) %>% 
+    head(10)
+  
+  highchart() %>% 
+    hc_xAxis(categories = loc$LocDesc) %>% 
+    hc_add_series(data = loc$rd, type = "column", showInLegend = FALSE) %>% 
+    hc_add_theme(hc_theme_db())
+}
+
+Top_CrimeLocation_Graph(ChicagoCrime2)
+```
+
+# Crimes by Month
+```{r}
+Crime_byMonthBar = function(dataset){
+  by_Month = dataset %>% group_by(Month) %>% dplyr::summarize(Total = n())
+  
+  highchart() %>% 
+    hc_xAxis(categories = by_Month$Month) %>% 
+    hc_add_series(data = by_Month$Total, type = "column", showInLegend = FALSE) %>% 
+    hc_add_theme(hc_theme_db())
+}
+
+Crime_byMonthBar(ChicagoCrime2)
+```
+
+# Crimes by Weekday
+```{r}
+Crime_byWeekdayBar = function(dataset){
+  by_Weekday = dataset %>% group_by(Weekday) %>% dplyr::summarize(Total = n())
+  
+  highchart() %>% 
+    hc_xAxis(categories = by_Weekday$Weekday,title = "x Axis at top") %>% 
+    hc_add_series(data = by_Weekday$Total, type = "column", showInLegend = FALSE) %>% 
+    hc_add_theme(hc_theme_db())
+}
+
+Crime_byWeekdayBar(ChicagoCrime2)
+```
+
+# Prediction Model 
+```{r, echo=TRUE}
+data<-data.frame(ChicagoCrime2)
+index<-sample(1:nrow(data),25000)
+Model<-data[index,]
+
+preditive_sample<-subset(Model, select = c('Crime_Type','LocDesc','Arrest','Beat','Weekday','Month','District','Year'))
+
+# Classifying data on label basis and creating dummy variables
+label_arrest<-preditive_sample$Arrest
+
+#Creating dummies for categorical variables
+DummyVariables<-model.matrix(Arrest~.-1,data = preditive_sample)
+
+#Splitting dataset into testion and training dataset
+set.seed(2018)
+indicies=sample(1:2, length(preditive_sample$Arrest),replace= T, prob = c(.8,.2))
+
+training.input=DummyVariables[indicies==1,]
+testing.input=DummyVariables[indicies==2,]
+training.label=label_arrest[indicies==1]
+testing.label=label_arrest[indicies==2]
+
+library(class)
+
+
+predictions<-knn(train=training.input, test=testing.input, cl=training.label, k=9)
+head(data.frame(predictions,testing.label))
+
+
+sum(predictions==testing.label)/length(predictions)
+
+
+table(predictions, testing.label)
+
+acc = c()
+for(i in 1:25){
+  predictions<-knn(train=training.input, test=testing.input, cl=training.label, k=i)
+  acc[i] = sum(predictions==testing.label)/length(predictions)
+  print(sum(predictions==testing.label)/length(predictions))
+  acc[i]
+}
+
+plot(acc,type = "o",xlab = "K Value",ylab = "Accuracy")
+```
